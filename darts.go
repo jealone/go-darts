@@ -30,9 +30,10 @@ type Value struct {
     SubWords []SubWord
 }
 type Darts struct {
-    Base      []int
-    Check     []int
-    ValuePool []Value
+    Base             []int
+    Check            []int
+    ValuePool        []Value
+    KeyString2Object map[string]string
 }
 
 type dartsBuild struct {
@@ -47,9 +48,10 @@ type dartsBuild struct {
 }
 
 // variable key should be sorted ascendingly
-func Build(key [][]rune /*Key_type*/, freq []int) Darts {
+func Build(key [][]rune /*Key_type*/, freq []int, key2ObjectMap map[string]string) Darts {
     var d = new(dartsBuild)
 
+    d.darts.KeyString2Object = key2ObjectMap
     d.key = key
     d.freq = freq
     d.resize(512)
@@ -302,6 +304,31 @@ func (d Darts) CommonPrefixSearch(key []rune /*Key_type*/, nodePos int) (results
     }
     return results
 }
+func (d *Darts) MultiSearch(key []rune, nodePos int) ([]string, error) {
+    var rst []ResultPair
+    var keyword string
+    var object []string
+    word := key
+    if len(word) == 0 {
+        goto END
+    }
+MATCH:
+    rst = d.CommonPrefixSearch(word, 0)
+    if rst == nil {
+        if len(word) == 1 {
+            goto END
+        }
+        word = word[1:]
+        goto MATCH
+    }
+    keyword = string(word[:rst[len(rst)-1].PrefixLen])
+    // fmt.Println(d.KeyString2Object[keyword])
+    object = append(object, d.KeyString2Object[keyword])
+    word = word[len(rst):]
+    goto MATCH
+END:
+    return object, nil
+}
 func Load(filename string) (Darts, error) {
     var dict Darts
     file, err := os.Open(filename)
@@ -318,6 +345,7 @@ func Load(filename string) (Darts, error) {
 type dartsKey struct {
     key   []rune /*Key_type*/
     value int
+    Oid   string
 }
 type dartsKeySlice []dartsKey
 
@@ -367,19 +395,23 @@ func Import(inFile, outFile string, useDAWG bool) (Darts, error) {
     line, _, bufErr := uniLineReader.ReadLine()
     for nil == bufErr {
         rst := strings.Split(string(line), "\t")
+        //todo 错误处理
         key := []rune(rst[0])
         value, _ := strconv.Atoi(rst[1])
-        dartsKeys = append(dartsKeys, dartsKey{key, value})
+        oid := strings.TrimSpace(rst[2])
+        dartsKeys = append(dartsKeys, dartsKey{key, value, oid})
         line, _, bufErr = uniLineReader.ReadLine()
     }
     sort.Sort(dartsKeys)
 
     keys := make([][]rune, len(dartsKeys))
     values := make([]int, len(dartsKeys))
+    keyString2Object := make(map[string]string)
 
     for i := 0; i < len(dartsKeys); i++ {
         keys[i] = dartsKeys[i].key
         values[i] = dartsKeys[i].value
+        keyString2Object[string(dartsKeys[i].key)] = dartsKeys[i].Oid
     }
     fmt.Printf("input dict length: %v\n", len(keys))
     round := len(keys)
@@ -387,7 +419,7 @@ func Import(inFile, outFile string, useDAWG bool) (Darts, error) {
     if useDAWG {
         d = BuildFromDAWG(keys[:round], values[:round])
     } else {
-        d = Build(keys[:round], values[:round])
+        d = Build(keys[:round], values[:round], keyString2Object)
     }
     d.UpdateThesaurus(keys[:round])
     fmt.Printf("build out length %v\n", len(d.Base))
