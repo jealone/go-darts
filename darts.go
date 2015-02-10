@@ -308,6 +308,7 @@ func (d *Darts) MultiSearch(key []rune, nodePos int) ([]string, error) {
     var rst []ResultPair
     var keyword string
     var object []string
+    checked := make(map[string]bool)
     word := key
     if len(word) == 0 {
         goto END
@@ -315,7 +316,7 @@ func (d *Darts) MultiSearch(key []rune, nodePos int) ([]string, error) {
 MATCH:
     rst = d.CommonPrefixSearch(word, 0)
     if rst == nil {
-        if len(word) == 1 {
+        if len(word) < 2 {
             goto END
         }
         word = word[1:]
@@ -323,7 +324,10 @@ MATCH:
     }
     keyword = string(word[:rst[len(rst)-1].PrefixLen])
     // fmt.Println(d.KeyString2Object[keyword])
-    object = append(object, d.KeyString2Object[keyword])
+    if false == checked[keyword] {
+        object = append(object, d.KeyString2Object[keyword])
+        checked[keyword] = true
+    }
     word = word[len(rst):]
     goto MATCH
 END:
