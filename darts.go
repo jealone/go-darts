@@ -304,6 +304,28 @@ func (d Darts) CommonPrefixSearch(key []rune /*Key_type*/, nodePos int) (results
 	}
 	return results
 }
+func (d *Darts) ContainMatch(key []rune, nodePos int) (bool, error) {
+	var flag bool
+	var rst []ResultPair
+	word := key
+	if len(word) == 0 {
+		flag = false
+		goto END_MATCH
+	}
+CONTINUE_MATCH:
+	rst = d.CommonPrefixSearch(word, 0)
+	if rst == nil {
+		if len(word) < 2 {
+			flag = false
+			goto END_MATCH
+		}
+		word = word[1:]
+		goto CONTINUE_MATCH
+	}
+	return true, nil
+END_MATCH:
+	return flag, nil
+}
 func (d *Darts) MultiSearch(key []rune, nodePos int) ([]string, error) {
 	var rst []ResultPair
 	var keyword string
