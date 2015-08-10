@@ -338,8 +338,11 @@ func (d *Darts) MultiSearch(key []rune, nodePos int) ([]string, error) {
 		goto END
 	}
 MATCH:
+	if 0 == len(word) {
+		goto END
+	}
 	rst = d.CommonPrefixSearch(word, 0)
-	if rst == nil {
+	if 0 == len(rst) {
 		if len(word) < 2 {
 			goto END
 		}
@@ -429,7 +432,9 @@ func Import(inFile, outFile string, useDAWG bool) (Darts, error) {
 		key := []rune(rst[0])
 		value, _ := strconv.Atoi(rst[1])
 		oid := strings.TrimSpace(rst[2])
-		dartsKeys = append(dartsKeys, dartsKey{key, value, oid})
+		if 0 != len(key) {
+			dartsKeys = append(dartsKeys, dartsKey{key, value, oid})
+		}
 		line, _, bufErr = uniLineReader.ReadLine()
 	}
 	sort.Sort(dartsKeys)
