@@ -329,6 +329,7 @@ END_MATCH:
 func (d *Darts) MultiSearch(key []rune, nodePos int) ([]string, error) {
 	var rst []ResultPair
 	var keyword string
+	var index int
 	var object []string
 	var oid string
 	checked := make(map[string]bool)
@@ -349,7 +350,8 @@ MATCH:
 		word = word[1:]
 		goto MATCH
 	}
-	keyword = string(word[:rst[len(rst)-1].PrefixLen])
+	index = rst[len(rst)-1].PrefixLen
+	keyword = string(word[:index])
 	// fmt.Println(d.KeyString2Object[keyword])
 	oid = d.KeyString2Object[keyword]
 	if false == checked[keyword] && false == oidChecked[oid] {
@@ -357,7 +359,7 @@ MATCH:
 		checked[keyword] = true
 		oidChecked[oid] = true
 	}
-	word = word[len(rst):]
+	word = word[index:]
 	goto MATCH
 END:
 	return object, nil
