@@ -473,3 +473,52 @@ func Import(inFile, outFile string, useDAWG bool) (Darts, error) {
 
 	return d, nil
 }
+
+func Generate(list []map[string]string, useDAWG bool) (Darts, error) {
+	if 0 == len(list) {
+		return Darts{}, fmt.Errorf("empty list input")
+	}
+	dartsKeys := make(dartsKeySlice, 0, 130000)
+	for _,item := range list {
+		//rst := strings.Split(string(line), "\t")
+		key := []rune(item["key"])
+		value, _ := strconv.Atoi(item["value"])
+		oid := strings.TrimSpace(item["oid"])
+		if 0 != len(key) {
+			dartsKeys = append(dartsKeys, dartsKey{key, value, oid})
+		}
+	}
+	sort.Sort(dartsKeys)
+
+	keys := make([][]rune, len(dartsKeys))
+	values := make([]int, len(dartsKeys))
+	keyString2Object := make(map[string]string)
+
+	for i := 0; i < len(dartsKeys); i++ {
+		keys[i] = dartsKeys[i].key
+		values[i] = dartsKeys[i].value
+		keyString2Object[string(dartsKeys[i].key)] = dartsKeys[i].Oid
+	}
+	fmt.Printf("input dict length: %v\n", len(keys))
+	round := len(keys)
+	var d Darts
+	if useDAWG {
+		d = BuildFromDAWG(keys[:round], values[:round])
+	} else {
+		d = Build(keys[:round], values[:round], keyString2Object)
+	}
+	d.UpdateThesaurus(keys[:round])
+	fmt.Printf("build out length %v\n", len(d.Base))
+	t := time.Now()
+	for i := 0; i < round; i++ {
+		if true != d.ExactMatchSearch(keys[i], 0) {
+			err := fmt.Errorf("missing key %s, %v, %d, %v, %v", string(keys[i]), keys[i], i, keys[i-1], keys[i+1])
+			return d, err
+		}
+	}
+	fmt.Println(time.Since(t))
+	//enc := gob.NewEncoder(ofile)
+	//enc.Encode(d)
+
+	return d, nil
+}
